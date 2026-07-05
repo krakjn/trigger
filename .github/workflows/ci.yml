@@ -1,0 +1,60 @@
+name: ci
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ '*' ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build_and_release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v7
+    - name: Get Zig 0.16.0
+      run: |
+        curl -fSL https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz -o zig.tar.xz
+        sudo tar -xJf zig.tar.xz -C /usr/local
+        sudo ln -sf /usr/local/zig-x86_64-linux-0.16.0/zig /usr/local/bin/zig
+        rm zig.tar.xz
+                  
+    # - name: Get Just latest
+    #   run: |
+    #     curl -fsSL https://just.systems/install.sh | sudo bash -s -- --to /usr/local/bin
+      
+    - name: Build
+      run: zig build cross
+
+    - name: Build packages
+      run: |
+        sudo apt update && sudo apt install -y dpkg-dev zip
+        bash pkg/deb/create.sh all
+        bash pkg/brew/create.sh all
+        bash pkg/winget/create.sh all
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v7
+      with:
+        name: trigger-packages
+        path: |
+          pkg/deb/libtrigger_*.deb
+          pkg/brew/libtrigger-*.tar.gz
+          pkg/winget/libtrigger-*.zip
+        retention-days: 30
+
+    - name: Upload GitHub Release assets
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          pkg/deb/libtrigger_*.deb
+          pkg/brew/libtrigger-*.tar.gz
+          pkg/winget/libtrigger-*.zip
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

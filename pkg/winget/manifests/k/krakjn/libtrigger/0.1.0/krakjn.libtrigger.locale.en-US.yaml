@@ -1,0 +1,12 @@
+PackageIdentifier: krakjn.libtrigger
+PackageVersion: 0.1.0
+PackageLocale: en-US
+Publisher: Tony Bright
+PublisherUrl: https://github.com/krakjn/trigger
+PackageName: libtrigger
+PackageUrl: https://github.com/krakjn/trigger
+ShortDescription: Library to capture file events from kernel
+License: MIT
+LicenseUrl: https://github.com/krakjn/trigger/blob/main/LICENSE
+ManifestType: locale
+ManifestVersion: 1.6.0

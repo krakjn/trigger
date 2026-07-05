@@ -1,0 +1,37 @@
+PackageIdentifier: krakjn.libtrigger
+PackageVersion: 0.1.0
+PackageLocale: en-US
+Publisher: Tony Bright
+PublisherUrl: https://github.com/krakjn/trigger
+PackageName: libtrigger
+PackageUrl: https://github.com/krakjn/trigger
+ShortDescription: Library to capture file events from kernel
+License: MIT
+LicenseUrl: https://github.com/krakjn/trigger/blob/main/LICENSE
+Installers:
+  - Architecture: x64
+    InstallerType: zip
+    InstallerUrl: https://github.com/krakjn/trigger/releases/download/v0.1.0/libtrigger-0.1.0-x64.zip
+    InstallerSha256: FILL_IN_AFTER_CREATE
+    NestedInstallerType: copy
+    NestedInstallerFiles:
+      - RelativeFilePath: include/trigger.h
+        DestinationPath: include/trigger.h
+      - RelativeFilePath: lib/trigger.lib
+        DestinationPath: lib/trigger.lib
+      - RelativeFilePath: bin/trigger.dll
+        DestinationPath: bin/trigger.dll
+  - Architecture: arm64
+    InstallerType: zip
+    InstallerUrl: https://github.com/krakjn/trigger/releases/download/v0.1.0/libtrigger-0.1.0-arm64.zip
+    InstallerSha256: FILL_IN_AFTER_CREATE
+    NestedInstallerType: copy
+    NestedInstallerFiles:
+      - RelativeFilePath: include/trigger.h
+        DestinationPath: include/trigger.h
+      - RelativeFilePath: lib/trigger.lib
+        DestinationPath: lib/trigger.lib
+      - RelativeFilePath: bin/trigger.dll
+        DestinationPath: bin/trigger.dll
+ManifestType: singleton
+ManifestVersion: 1.6.0
