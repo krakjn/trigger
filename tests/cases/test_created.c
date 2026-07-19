@@ -38,11 +38,11 @@ int test_created(void) {
     }
 
 #if defined(_WIN32)
-    file_watcher_t* watcher = trigger_create_watcher(child, on_file_change);
+    trigger_watcher_t* watcher = trigger_init(child, on_file_change);
 #else
-    file_watcher_t* watcher = trigger_create_watcher(dir, on_file_change);
+    trigger_watcher_t* watcher = trigger_init(dir, on_file_change);
 #endif
-    if (!watcher || trigger_start_watching(watcher) != 0) {
+    if (!watcher || trigger_start(watcher) != TRIGGER_OK) {
         fprintf(stderr, "failed to watch for create test\n");
         rmdir(dir);
         return -1;
@@ -55,19 +55,19 @@ int test_created(void) {
 #endif
     if (fd < 0) {
         perror("open");
-        trigger_destroy_watcher(watcher);
+        trigger_destroy(watcher);
         rmdir(dir);
         return -1;
     }
     close(fd);
 
 #if defined(__APPLE__)
-    const int expected[] = { FILE_EVENT_CREATED, FILE_EVENT_MODIFIED };
+    const int expected[] = { TRIGGER_EVENT_CREATED, TRIGGER_EVENT_MODIFIED };
     const int rc = wait_for_any_event(watcher, expected, 2, 5000);
 #else
-    const int rc = wait_for_event(watcher, FILE_EVENT_CREATED, 5000);
+    const int rc = wait_for_event(watcher, TRIGGER_EVENT_CREATED, 5000);
 #endif
-    trigger_destroy_watcher(watcher);
+    trigger_destroy(watcher);
     unlink(child);
     rmdir(dir);
     return rc;

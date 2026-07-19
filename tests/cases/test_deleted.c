@@ -20,8 +20,8 @@ int test_deleted(void) {
     }
     close(fd);
 
-    file_watcher_t* watcher = trigger_create_watcher(path, on_file_change);
-    if (!watcher || trigger_start_watching(watcher) != 0) {
+    trigger_watcher_t* watcher = trigger_init(path, on_file_change);
+    if (!watcher || trigger_start(watcher) != TRIGGER_OK) {
         fprintf(stderr, "failed to watch %s for delete test\n", path);
         unlink(path);
         return -1;
@@ -29,11 +29,11 @@ int test_deleted(void) {
 
     if (unlink(path) != 0) {
         perror("unlink");
-        trigger_destroy_watcher(watcher);
+        trigger_destroy(watcher);
         return -1;
     }
 
-    const int rc = wait_for_event(watcher, FILE_EVENT_DELETED, 5000);
-    trigger_destroy_watcher(watcher);
+    const int rc = wait_for_event(watcher, TRIGGER_EVENT_DELETED, 5000);
+    trigger_destroy(watcher);
     return rc;
 }

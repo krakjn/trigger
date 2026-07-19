@@ -22,7 +22,16 @@ typedef struct {
 
 static event_queue_t g_queue;
 static volatile int g_shutdown = 0;
-static file_watcher_t* g_watcher = NULL;
+static trigger_watcher_t* g_watcher = NULL;
+
+static const char* event_name(int event_type) {
+    switch (event_type) {
+        case TRIGGER_EVENT_MODIFIED: return "MODIFIED";
+        case TRIGGER_EVENT_CREATED: return "CREATED";
+        case TRIGGER_EVENT_DELETED: return "DELETED";
+        default: return "UNKNOWN";
+    }
+}
 
 static void queue_push(const char* path, int event_type) {
     pthread_mutex_lock(&g_queue.mutex);
@@ -61,8 +70,8 @@ static void on_file_change(const char* filepath, int event_type) {
 static void* watcher_thread_main(void* arg) {
     const char* path = (const char*)arg;
 
-    g_watcher = trigger_create_watcher(path, on_file_change);
-    if (!g_watcher || trigger_start_watching(g_watcher) != 0) {
+    g_watcher = trigger_init(path, on_file_change);
+    if (!g_watcher || trigger_start(g_watcher) != TRIGGER_OK) {
         fprintf(stderr, "Watcher thread failed to start on '%s'\n", path);
         g_shutdown = 1;
         pthread_cond_broadcast(&g_queue.cond);
@@ -70,14 +79,14 @@ static void* watcher_thread_main(void* arg) {
     }
 
     while (!g_shutdown) {
-        int result = trigger_wait_for_changes(g_watcher);
-        if (result < 0) {
+        TRIGGER_RESULT result = trigger_recv(g_watcher);
+        if (result == TRIGGER_ERROR) {
             break;
         }
     }
 
-    trigger_stop_watching(g_watcher);
-    trigger_destroy_watcher(g_watcher);
+    trigger_stop(g_watcher);
+    trigger_destroy(g_watcher);
     g_watcher = NULL;
     g_shutdown = 1;
     pthread_cond_broadcast(&g_queue.cond);
@@ -103,7 +112,7 @@ int main(int argc, char* argv[]) {
 
     queued_event_t event;
     while (queue_pop(&event)) {
-        printf("File '%s' was %s\n", event.path, trigger_get_event_string(event.event_type));
+        printf("File '%s' was %s\n", event.path, event_name(event.event_type));
     }
 
     pthread_join(watcher_thread, NULL);

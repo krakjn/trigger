@@ -23,23 +23,32 @@ static void sleep_ms(int ms) {
 static int g_last_event = 0;
 static int g_callback_count = 0;
 
+static const char* event_name(int event_type) {
+    switch (event_type) {
+        case TRIGGER_EVENT_MODIFIED: return "MODIFIED";
+        case TRIGGER_EVENT_CREATED: return "CREATED";
+        case TRIGGER_EVENT_DELETED: return "DELETED";
+        default: return "UNKNOWN";
+    }
+}
+
 void on_file_change(const char* filepath, int event_type) {
     (void)filepath;
     g_last_event = event_type;
     g_callback_count++;
 }
 
-int wait_for_event(file_watcher_t* watcher, int expected, int timeout_ms) {
+int wait_for_event(trigger_watcher_t* watcher, int expected, int timeout_ms) {
     g_last_event = 0;
     g_callback_count = 0;
 
     for (int elapsed = 0; elapsed < timeout_ms; elapsed += 10) {
-        const int result = trigger_check_changes(watcher);
-        if (result < 0) {
-            fprintf(stderr, "trigger_check_changes failed\n");
+        const TRIGGER_RESULT result = trigger_try_recv(watcher);
+        if (result == TRIGGER_ERROR) {
+            fprintf(stderr, "trigger_try_recv failed\n");
             return -1;
         }
-        if (result == 1 && g_last_event == expected) {
+        if (result != TRIGGER_OK && g_last_event == expected) {
             return 0;
         }
         sleep_ms(10);
@@ -48,24 +57,24 @@ int wait_for_event(file_watcher_t* watcher, int expected, int timeout_ms) {
     fprintf(
         stderr,
         "timeout waiting for %s, last event was %s (%d callbacks)\n",
-        trigger_get_event_string(expected),
-        trigger_get_event_string(g_last_event),
+        event_name(expected),
+        event_name(g_last_event),
         g_callback_count
     );
     return -1;
 }
 
-int wait_for_any_event(file_watcher_t* watcher, const int* expected, size_t count, int timeout_ms) {
+int wait_for_any_event(trigger_watcher_t* watcher, const int* expected, size_t count, int timeout_ms) {
     g_last_event = 0;
     g_callback_count = 0;
 
     for (int elapsed = 0; elapsed < timeout_ms; elapsed += 10) {
-        const int result = trigger_check_changes(watcher);
-        if (result < 0) {
-            fprintf(stderr, "trigger_check_changes failed\n");
+        const TRIGGER_RESULT result = trigger_try_recv(watcher);
+        if (result == TRIGGER_ERROR) {
+            fprintf(stderr, "trigger_try_recv failed\n");
             return -1;
         }
-        if (result == 1) {
+        if (result != TRIGGER_OK) {
             for (size_t i = 0; i < count; i++) {
                 if (g_last_event == expected[i]) {
                     return 0;
@@ -78,7 +87,7 @@ int wait_for_any_event(file_watcher_t* watcher, const int* expected, size_t coun
     fprintf(
         stderr,
         "timeout waiting for event, last event was %s (%d callbacks)\n",
-        trigger_get_event_string(g_last_event),
+        event_name(g_last_event),
         g_callback_count
     );
     return -1;

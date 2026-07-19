@@ -8,34 +8,43 @@ typedef struct {
     int index;
 } worker_arg_t;
 
+static const char* event_name(int event_type) {
+    switch (event_type) {
+        case TRIGGER_EVENT_MODIFIED: return "MODIFIED";
+        case TRIGGER_EVENT_CREATED: return "CREATED";
+        case TRIGGER_EVENT_DELETED: return "DELETED";
+        default: return "UNKNOWN";
+    }
+}
+
 static void on_file_change(const char* filepath, int event_type) {
-    printf("[thread] File '%s' was %s\n", filepath, trigger_get_event_string(event_type));
+    printf("[thread] File '%s' was %s\n", filepath, event_name(event_type));
 }
 
 static void* worker_main(void* arg) {
     worker_arg_t* warg = (worker_arg_t*)arg;
-    file_watcher_t* watcher = trigger_create_watcher(warg->path, on_file_change);
+    trigger_watcher_t* watcher = trigger_init(warg->path, on_file_change);
     if (!watcher) {
         fprintf(stderr, "Worker %d: failed to create watcher for '%s'\n", warg->index, warg->path);
         return NULL;
     }
 
-    if (trigger_start_watching(watcher) != 0) {
+    if (trigger_start(watcher) != TRIGGER_OK) {
         fprintf(stderr, "Worker %d: failed to start watching '%s'\n", warg->index, warg->path);
-        trigger_destroy_watcher(watcher);
+        trigger_destroy(watcher);
         return NULL;
     }
 
     printf("Worker %d watching %s\n", warg->index, warg->path);
 
     while (1) {
-        int result = trigger_wait_for_changes(watcher);
-        if (result < 0) {
+        TRIGGER_RESULT result = trigger_recv(watcher);
+        if (result == TRIGGER_ERROR) {
             break;
         }
     }
 
-    trigger_destroy_watcher(watcher);
+    trigger_destroy(watcher);
     return NULL;
 }
 

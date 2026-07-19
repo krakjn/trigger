@@ -4,12 +4,21 @@
 #include "trigger.h"
 
 typedef struct {
-    file_watcher_t* watcher;
+    trigger_watcher_t* watcher;
     const char* path;
 } watched_file_t;
 
+static const char* event_name(int event_type) {
+    switch (event_type) {
+        case TRIGGER_EVENT_MODIFIED: return "MODIFIED";
+        case TRIGGER_EVENT_CREATED: return "CREATED";
+        case TRIGGER_EVENT_DELETED: return "DELETED";
+        default: return "UNKNOWN";
+    }
+}
+
 static void on_file_change(const char* filepath, int event_type) {
-    printf("File '%s' was %s\n", filepath, trigger_get_event_string(event_type));
+    printf("File '%s' was %s\n", filepath, event_name(event_type));
 }
 
 int main(int argc, char* argv[]) {
@@ -27,12 +36,12 @@ int main(int argc, char* argv[]) {
 
     for (int i = 0; i < count; i++) {
         files[i].path = argv[i + 1];
-        files[i].watcher = trigger_create_watcher(files[i].path, on_file_change);
+        files[i].watcher = trigger_init(files[i].path, on_file_change);
         if (!files[i].watcher) {
             fprintf(stderr, "Failed to create watcher for '%s'\n", files[i].path);
             goto cleanup;
         }
-        if (trigger_start_watching(files[i].watcher) != 0) {
+        if (trigger_start(files[i].watcher) != TRIGGER_OK) {
             fprintf(stderr, "Failed to start watching '%s'\n", files[i].path);
             goto cleanup;
         }
@@ -43,8 +52,8 @@ int main(int argc, char* argv[]) {
 
     while (1) {
         for (int i = 0; i < count; i++) {
-            int result = trigger_check_changes(files[i].watcher);
-            if (result < 0) {
+            TRIGGER_RESULT result = trigger_try_recv(files[i].watcher);
+            if (result == TRIGGER_ERROR) {
                 fprintf(stderr, "Error checking '%s'\n", files[i].path);
                 goto cleanup;
             }
@@ -55,7 +64,7 @@ int main(int argc, char* argv[]) {
 cleanup:
     for (int i = 0; i < count; i++) {
         if (files[i].watcher) {
-            trigger_destroy_watcher(files[i].watcher);
+            trigger_destroy(files[i].watcher);
         }
     }
     free(files);

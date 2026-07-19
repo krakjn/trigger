@@ -35,8 +35,8 @@ int test_modified(void) {
     }
     close(fd);
 
-    file_watcher_t* watcher = trigger_create_watcher(path, on_file_change);
-    if (!watcher || trigger_start_watching(watcher) != 0) {
+    trigger_watcher_t* watcher = trigger_init(path, on_file_change);
+    if (!watcher || trigger_start(watcher) != TRIGGER_OK) {
         fprintf(stderr, "failed to watch %s for modify test\n", path);
         unlink(path);
         return -1;
@@ -45,21 +45,21 @@ int test_modified(void) {
     const int out_fd = open(path, O_WRONLY | O_APPEND);
     if (out_fd < 0) {
         perror("open");
-        trigger_destroy_watcher(watcher);
+        trigger_destroy(watcher);
         unlink(path);
         return -1;
     }
     if (write(out_fd, "!", 1) != 1) {
         perror("write");
         close(out_fd);
-        trigger_destroy_watcher(watcher);
+        trigger_destroy(watcher);
         unlink(path);
         return -1;
     }
     close(out_fd);
 
-    const int rc = wait_for_event(watcher, FILE_EVENT_MODIFIED, 5000);
-    trigger_destroy_watcher(watcher);
+    const int rc = wait_for_event(watcher, TRIGGER_EVENT_MODIFIED, 5000);
+    trigger_destroy(watcher);
     unlink(path);
     return rc;
 }
