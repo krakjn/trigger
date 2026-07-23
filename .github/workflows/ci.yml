@@ -27,8 +27,12 @@ jobs:
     #   run: |
     #     curl -fsSL https://just.systems/install.sh | sudo bash -s -- --to /usr/local/bin
       
+    - uses: krakjn/bump@v8
+
     - name: Build
-      run: zig build cross
+      run: |
+        bump emit c --prefix TRIGGER_ | sed -i '11r /dev/stdin' include/trigger.h
+        zig build cross
 
     - name: Build packages
       run: |
